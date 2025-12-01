@@ -218,7 +218,11 @@ export async function getActiveProjects(
   let scoped = [...mockProjects];
 
   if (scope?.unit) {
-    scoped = scoped.filter((p) => p.unitName === scope.unit);
+    scoped = scoped.filter((p) =>
+      scope.includeSubUnits
+        ? p.unitName?.includes(scope.unit)
+        : p.unitName === scope.unit || p.unitName?.includes(scope.unit)
+    );
   }
 
   if (scope?.clientId || scope?.clientName) {

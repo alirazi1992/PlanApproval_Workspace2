@@ -8,11 +8,11 @@ export type ProjectScope =
 
 export function getProjectScopeForUser(user: UserProfile & { unitId?: string; clientId?: string }): ProjectScope {
   if (user.role === "technician" || user.role === "TechnicalExpert") {
-    return { unit: user.unitId ?? "واحد طراحی" };
+    return user.unitId ? { unit: user.unitId } : { organizationWide: true };
   }
 
   if (user.role === "UnitManager") {
-    return { unit: user.unitId ?? "واحد طراحی", includeSubUnits: true };
+    return user.unitId ? { unit: user.unitId, includeSubUnits: true } : { organizationWide: true };
   }
 
   if (user.role === "ClientRepresentative" || user.role === "client") {
