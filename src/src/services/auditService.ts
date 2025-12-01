@@ -11,6 +11,5 @@ export function logDashboardAction(payload: {
   userId: string;
   metadata?: any;
 }) {
-  // placeholder for backend audit logging
-  console.info("[audit]", payload);
+  console.log("Audit:", payload.action, payload.projectId, payload.userId, payload.metadata);
 }

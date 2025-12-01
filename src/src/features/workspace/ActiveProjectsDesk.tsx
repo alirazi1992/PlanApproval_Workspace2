@@ -29,11 +29,6 @@ function useActiveProjectsDesk(filters: ProjectFilters) {
       const data = await getActiveProjects(scope, filters);
       setProjects(data);
       setError(null);
-      logDashboardAction({
-        action: "ViewActiveProjects",
-        userId: user.email,
-        metadata: { scope },
-      });
     } catch (err) {
       setError(err as Error);
     } finally {
@@ -97,6 +92,11 @@ export function ActiveProjectsDesk() {
   const [filters, setFilters] = useState<ProjectFilters>({ status: "All", sort: "DueDate" });
   const { projects, isLoading, error, refetch, setProjects, scope } = useActiveProjectsDesk(filters);
 
+  useEffect(() => {
+    if (!user) return;
+    logDashboardAction({ action: "ViewActiveProjects", userId: user.email, metadata: { scope } });
+  }, [scope, user]);
+
   const handleFiltersChange = (next: ProjectFilters) => {
     setFilters(next);
     if (user) {
@@ -106,13 +106,23 @@ export function ActiveProjectsDesk() {
 
   const sortedProjects = useMemo(() => sortProjects(projects, filters.sort), [filters.sort, projects]);
 
-  const handleSign = async (project: ActiveProject) => {
+  const handleOpenProject = (projectId: string) => {
     if (!user) return;
-    await signProjectDocuments(project.id);
-    setProjects((prev) =>
-      prev.map((p) => (p.id === project.id ? { ...p, hasDigitalSignature: true } : p))
-    );
-    logDashboardAction({ action: "SignDigital", userId: user.email, projectId: project.id });
+    logDashboardAction({ action: "OpenProject", projectId, userId: user.email });
+    navigate(`/workspace/projects/${projectId}`);
+  };
+
+  const handleOpenReview = (projectId: string) => {
+    if (!user) return;
+    logDashboardAction({ action: "OpenReview", projectId, userId: user.email });
+    navigate(`/workspace/projects/${projectId}/review`);
+  };
+
+  const handleDigitalSign = async (projectId: string) => {
+    if (!user) return;
+    logDashboardAction({ action: "SignDigital", projectId, userId: user.email });
+    await signProjectDocuments(projectId);
+    setProjects((prev) => prev.map((p) => (p.id === projectId ? { ...p, hasDigitalSignature: true } : p)));
   };
 
   const availableUnits = useMemo(
@@ -213,17 +223,14 @@ export function ActiveProjectsDesk() {
               <div className="flex items-center justify-between text-xs text-gray-500 flex-row">
                 {project.dueDate && <span>موعد: {project.dueDate}</span>}
                 {project.lastUpdate && <span>آخرین به‌روزرسانی: {project.lastUpdate}</span>}
-                {scope?.scope === "all" && <span>{project.unitName}</span>}
+                {(scope as any)?.organizationWide && <span>{project.unitName}</span>}
               </div>
 
               <div className="grid grid-cols-3 gap-2">
                 <Button
                   variant="ghost"
                   className="text-sm"
-                  onClick={() => {
-                    logDashboardAction({ action: "OpenProject", projectId: project.id, userId: user?.email || "" });
-                    navigate(`/workspace/projects/${project.id}`);
-                  }}
+                  onClick={() => handleOpenProject(project.id)}
                 >
                   <Icon name="arrowUpRight" size={14} className="ml-2" />
                   باز کردن پرونده
@@ -232,10 +239,7 @@ export function ActiveProjectsDesk() {
                   variant="primary"
                   className="text-sm"
                   disabled={project.evaluationStatus === "Completed"}
-                  onClick={() => {
-                    logDashboardAction({ action: "OpenReview", projectId: project.id, userId: user?.email || "" });
-                    navigate(`/workspace/projects/${project.id}/review`);
-                  }}
+                  onClick={() => handleOpenReview(project.id)}
                 >
                   <Icon name="check" size={14} className="ml-2" />
                   تکمیل ارزیابی
@@ -243,7 +247,7 @@ export function ActiveProjectsDesk() {
                 <Button
                   variant="secondary"
                   className="text-sm"
-                  onClick={() => handleSign(project)}
+                  onClick={() => handleDigitalSign(project.id)}
                   disabled={project.hasDigitalSignature}
                 >
                   <Icon name="clipboard" size={14} className="ml-2" />

@@ -11,20 +11,20 @@ export interface ProjectFilters {
 
 const mockProjects: ActiveProject[] = [
   {
-    id: "desk-2045",
+    id: "UTN-2045",
     code: "UTN-2045",
-    title: "بازطراحی بدنه ",
-    clientName: "خط لوله جنوب",
-    location: "اصفهان",
-    responsible: "سارا رحیمی",
-    unitName: "واحد طراحی",
-    progressPercent: 68,
+    title: "بازطراحی بدنه",
+    clientName: "کارفرمای واحد جنوب",
+    location: "استان اصفهان",
+    responsible: "مهندس رضایی",
+    unitName: "واحد طراحی بدنه",
+    progressPercent: 66,
     documentsProgressPercent: 75,
     evaluationStatus: "InProgress",
     hasDigitalSignature: false,
     status: "TrackFast",
-    dueDate: "2024-07-25",
-    lastUpdate: "2024-07-12",
+    dueDate: "2025-07-25",
+    lastUpdate: "2025-12-01",
   },
   {
     id: "desk-2101",
@@ -121,11 +121,11 @@ export async function getActiveProjects(
   await new Promise((resolve) => setTimeout(resolve, 300));
   let scoped = [...mockProjects];
 
-  if (scope?.scope === "unit" && scope.unitId) {
-    scoped = scoped.filter((p) => p.unitName === scope.unitId);
+  if (scope?.unit) {
+    scoped = scoped.filter((p) => p.unitName === scope.unit);
   }
 
-  if (scope?.scope === "client" && scope.clientEmail) {
+  if (scope?.clientId || scope?.clientName) {
     scoped = scoped.filter((p) =>
       scope.clientName ? p.clientName === scope.clientName : Boolean(p.clientName)
     );
@@ -142,9 +142,7 @@ export async function getProjectById(id: string): Promise<ActiveProject> {
 }
 
 export async function signProjectDocuments(projectId: string): Promise<void> {
-  await new Promise((resolve) => setTimeout(resolve, 250));
-  const idx = mockProjects.findIndex((p) => p.id === projectId);
-  if (idx >= 0) {
-    mockProjects[idx] = { ...mockProjects[idx], hasDigitalSignature: true };
-  }
+  return new Promise((resolve) => {
+    setTimeout(() => resolve(), 700);
+  });
 }
