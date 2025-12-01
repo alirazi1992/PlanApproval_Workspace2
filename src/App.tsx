@@ -20,7 +20,7 @@ import { SettingsProfile } from "./src/pages/SettingsProfile";
 import { SettingsSecurity } from "./src/pages/SettingsSecurity";
 import { TechnicianCalendar } from "./src/pages/TechnicianCalendar"; // ✅ technician calendar
 import { Messenger } from "./src/pages/Messenger";
-import TechnicianWorkspace from "./src/pages/TechnicianWorkspace";
+import WorkspaceProjects from "./src/pages/WorkspaceProjects";
 
 import FastPass from "./src/pages/FastPass";
 
@@ -99,7 +99,23 @@ function AppRoutes() {
         path="/workspace"
         element={
           <PrivateRoute roles={["technician", "admin"]}>
-            <TechnicianWorkspace />
+            <WorkspaceProjects />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/workspace/projects/:id"
+        element={
+          <PrivateRoute roles={["technician", "admin"]}>
+            <ProjectDetail />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/workspace/projects/:id/review"
+        element={
+          <PrivateRoute roles={["technician", "admin"]}>
+            <ProjectDetail />
           </PrivateRoute>
         }
       />
