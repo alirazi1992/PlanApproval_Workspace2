@@ -3,19 +3,19 @@ import { ProjectFilters } from "../../services/projectService";
 
 interface ActiveProjectsFilterBarProps {
   filters: ProjectFilters;
-  onChange: (next: ProjectFilters) => void;
+  onChangeFilters: (next: ProjectFilters) => void;
   showUnitFilter?: boolean;
   availableUnits?: { id: string; name: string }[];
 }
 
 export function ActiveProjectsFilterBar({
   filters,
-  onChange,
+  onChangeFilters,
   showUnitFilter = false,
   availableUnits = [],
 }: ActiveProjectsFilterBarProps) {
   const handleChange = (key: keyof ProjectFilters, value: string | undefined) => {
-    onChange({ ...filters, [key]: value });
+    onChangeFilters({ ...filters, [key]: value });
   };
 
   return (

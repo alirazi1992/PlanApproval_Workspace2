@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth, UserProfile } from "../auth/AuthContext";
+import { useAuth } from "../auth/AuthContext";
 import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
 import { Icon } from "../../components/ui/Icon";
@@ -11,20 +11,8 @@ import {
 } from "../../services/projectService";
 import { ActiveProject } from "../../types/projects";
 import { ActiveProjectsFilterBar } from "./ActiveProjectsFilterBar";
-import { logDashboardAction } from "../../services/logService";
-
-function getProjectScopeForUser(user: UserProfile) {
-  if (user.role === "admin") {
-    return { scope: "all" };
-  }
-  if (user.role === "technician") {
-    return { scope: "unit", unitId: "واحد طراحی" };
-  }
-  if (user.role === "client") {
-    return { scope: "client", clientEmail: user.email, clientName: user.name };
-  }
-  return { scope: "limited" };
-}
+import { logDashboardAction } from "../../services/auditService";
+import { getProjectScopeForUser } from "../../lib/rbac";
 
 function useActiveProjectsDesk(filters: ProjectFilters) {
   const { user } = useAuth();
@@ -41,6 +29,11 @@ function useActiveProjectsDesk(filters: ProjectFilters) {
       const data = await getActiveProjects(scope, filters);
       setProjects(data);
       setError(null);
+      logDashboardAction({
+        action: "ViewActiveProjects",
+        userId: user.email,
+        metadata: { scope },
+      });
     } catch (err) {
       setError(err as Error);
     } finally {
@@ -50,15 +43,25 @@ function useActiveProjectsDesk(filters: ProjectFilters) {
 
   useEffect(() => {
     if (!user) return;
-    logDashboardAction({
-      action: "ViewActiveProjects",
-      userId: user.email,
-      metadata: { filters },
-    });
     fetchProjects();
-  }, [fetchProjects, filters, user]);
+  }, [fetchProjects, user]);
 
   return { projects, isLoading, error, refetch: fetchProjects, setProjects, scope };
+}
+
+function sortProjects(projects: ActiveProject[], sort?: ProjectFilters["sort"]) {
+  const list = [...projects];
+  switch (sort) {
+    case "TrackFast":
+      return list.sort((a, b) => (a.status === "TrackFast" ? -1 : 1) - (b.status === "TrackFast" ? -1 : 1));
+    case "Delay":
+      return list.sort((a, b) => a.progressPercent - b.progressPercent);
+    case "Alphabetical":
+      return list.sort((a, b) => a.code.localeCompare(b.code, "fa"));
+    case "DueDate":
+    default:
+      return list.sort((a, b) => (a.dueDate || "").localeCompare(b.dueDate || ""));
+  }
 }
 
 function EvaluationStatusText({ status }: { status: ActiveProject["evaluationStatus"] }) {
@@ -101,7 +104,7 @@ export function ActiveProjectsDesk() {
     }
   };
 
-  const sortedProjects = useMemo(() => projects, [projects]);
+  const sortedProjects = useMemo(() => sortProjects(projects, filters.sort), [filters.sort, projects]);
 
   const handleSign = async (project: ActiveProject) => {
     if (!user) return;
@@ -138,7 +141,7 @@ export function ActiveProjectsDesk() {
 
       <ActiveProjectsFilterBar
         filters={filters}
-        onChange={handleFiltersChange}
+        onChangeFilters={handleFiltersChange}
         showUnitFilter={user?.role === "admin"}
         availableUnits={availableUnits}
       />
@@ -186,8 +189,10 @@ export function ActiveProjectsDesk() {
               </div>
               <div className="flex items-center justify-between flex-row">
                 <h3 className="text-lg font-semibold text-gray-900">{project.title}</h3>
-                {project.status === "TrackFast" && (
+                {project.status === "TrackFast" ? (
                   <span className="px-2 py-1 rounded-lg bg-amber-100 text-amber-700 text-xs font-semibold">Track-Fast</span>
+                ) : (
+                  <span className="px-2 py-1 rounded-lg bg-gray-200 text-gray-700 text-xs">عادی</span>
                 )}
               </div>
               <p className="text-sm text-gray-600">کارفرما: {project.clientName} · موقعیت: {project.location}</p>

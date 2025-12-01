@@ -716,7 +716,7 @@ function TechnicianDashboardView() {
             <Button
               variant="ghost"
               className="px-4 py-2 text-sm text-gray-700"
-              onClick={() => navigate("/workspace", { state: { anchor: "desk" } })}
+              onClick={() => navigate("/workspace")}
             >
               <Icon name="layers" size={16} className="ml-2" />
               بازگشت به مرور پروژه‌ها
