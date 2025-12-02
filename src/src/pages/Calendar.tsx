@@ -6,6 +6,7 @@ import isBetween from "dayjs/plugin/isBetween";
 import localizedFormat from "dayjs/plugin/localizedFormat";
 import customParseFormat from "dayjs/plugin/customParseFormat";
 import weekday from "dayjs/plugin/weekday";
+import { useNavigate } from "react-router-dom";
 import { AppShell } from "../components/layout/AppShell";
 
 dayjs.extend(jalaliday);
@@ -83,6 +84,12 @@ const PROJECTS: Project[] = [
   { id: "p3", code: "UTN-24093", title: "بازآرایی شبکه برق اضطراری" },
 ];
 
+const PROJECT_STATUS: Record<string, string> = {
+  p1: "در حال بررسی اسناد طراحی",
+  p2: "در انتظار تایید کیفیت",
+  p3: "جلسه مشترک با کارفرما",
+};
+
 const initialItems: CalendarItem[] = [
   {
     id: "i1",
@@ -111,6 +118,24 @@ const initialItems: CalendarItem[] = [
     personId: "u3",
     date: dayjs().calendar("jalali").add(3, "day").toDate().toISOString(),
     stage: "بازگشت برای اصلاح",
+  },
+  {
+    id: "i4",
+    kind: "رویداد",
+    title: "بازدید کارگاهی",
+    projectId: "p3",
+    personId: "u3",
+    date: dayjs().calendar("jalali").add(1, "week").hour(9).toDate().toISOString(),
+    note: "همراه با تیم کنترل کیفیت",
+  },
+  {
+    id: "i5",
+    kind: "مهلت",
+    title: "ارسال بسته تحلیل بدنه",
+    projectId: "p1",
+    personId: "u2",
+    date: dayjs().calendar("jalali").add(6, "day").hour(16).toDate().toISOString(),
+    stage: "تایید اولیه",
   },
 ];
 
@@ -142,6 +167,7 @@ function formatJ(dateISO?: string) {
 
 // ---------- Calendar Component ----------
 function CalendarView() {
+  const navigate = useNavigate();
   const [currentMonth, setCurrentMonth] = useState<Dayjs>(toJ());
   const [items, setItems] = useState<CalendarItem[]>(initialItems);
   const [openDayISO, setOpenDayISO] = useState<string | null>(null);
@@ -237,167 +263,250 @@ function CalendarView() {
   const monthTitle = toJ(currentMonth).format("YYYY MMMM");
 
   return (
-    <div className="p-6">
-        {/* Header controls */}
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <button
-              className="px-3 py-2 rounded-lg border border-gray-200 hover:bg-gray-50"
-              onClick={handlePrev}
-            >
-              ▶
-            </button>
-            <button
-              className="px-3 py-2 rounded-lg border border-gray-200 hover:bg-gray-50"
-              onClick={handleToday}
-            >
-              امروز
-            </button>
-            <button
-              className="px-3 py-2 rounded-lg border border-gray-200 hover:bg-gray-50"
-              onClick={handleNext}
-            >
-              ◀
-            </button>
-          </div>
-          <h1 className="text-xl font-bold text-gray-900">{monthTitle}</h1>
-          <div>
-            <button
-              className="px-4 py-2 rounded-lg bg-gray-900 text-white hover:opacity-90"
-              onClick={() => startEditing(undefined, toJ(currentMonth))}
-            >
-              + افزودن رویداد
-            </button>
-          </div>
+    <div className="space-y-6">
+      <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="text-right space-y-1">
+          <p className="text-sm text-gray-500">هماهنگی تقویمی و برنامه‌ریزی تیمی</p>
+          <h1 className="text-xl font-bold text-gray-900">تقویم پروژه‌های جاری</h1>
+          <p className="text-sm text-gray-500">
+            رویدادها، جلسات و مهلت‌ها در یک نمای ماهانه. برای هر پروژه برنامه روزانه را باز کنید یا مستقیم به جزئیات بروید.
+          </p>
         </div>
-
-        {/* Week header */}
-        <div className="grid grid-cols-7 gap-2 mb-2">
-          {WEEKDAYS_FA.map((w) => (
-            <div
-              key={w}
-              className="text-center text-sm text-gray-500 py-2 select-none"
-            >
-              {w}
-            </div>
-          ))}
+        <div className="flex flex-wrap items-center gap-2 justify-end">
+          <button
+            className="px-4 py-2 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm"
+            onClick={() => navigate("/projects")}
+          >
+            مشاهده پروژه‌ها
+          </button>
+          <button
+            className="px-4 py-2 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm"
+            onClick={() => navigate(`/projects/${PROJECTS[0].id}`)}
+          >
+            تحلیل پروژه نمونه
+          </button>
+          <button
+            className="px-4 py-2 rounded-lg bg-gray-900 text-white hover:opacity-90 text-sm"
+            onClick={() => startEditing(undefined, toJ(currentMonth))}
+          >
+            + افزودن رویداد
+          </button>
         </div>
-
-        {/* Days grid */}
-        <div className="grid grid-cols-7 gap-2">
-          {days.map((d) => {
-            const isoKey = d.toDate().toISOString().slice(0, 10);
-            const list = dayItems.get(isoKey) ?? [];
-            const inThisMonth = d.month() === toJ(currentMonth).month();
-            const isToday = sameDay(d, toJ());
-
-            return (
-              <div
-                key={d.valueOf()}
-                onClick={() => openForDay(d)}
-                className={[
-                  "rounded-lg border p-2 min-h-[120px] flex flex-col cursor-pointer transition-colors",
-                  inThisMonth
-                    ? "bg-white border-gray-200 hover:bg-blue-50"
-                    : "bg-gray-50 border-gray-100 text-gray-400",
-                  isToday ? "ring-2 ring-blue-500" : "",
-                ].join(" ")}
-              >
-                <div className="flex items-center justify-between mb-1">
-                  <span
-                    className={[
-                      "text-sm font-semibold",
-                      inThisMonth ? "text-gray-800" : "text-gray-400",
-                    ].join(" ")}
-                  >
-                    {toJ(d).format("D")}
-                  </span>
-                  {/* dot count */}
-                  {list.length > 0 && (
-                    <span className="text-[11px] text-gray-500">
-                      {list.length} مورد
-                    </span>
-                  )}
-                </div>
-
-                <div className="flex-1 space-y-1 overflow-hidden">
-                  {list.slice(0, 3).map((it) => (
-                    <div
-                      key={it.id}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setOpenDayISO(d.toDate().toISOString());
-                      }}
-                      className="text-[11px] px-1.5 py-1 rounded-md text-white truncate"
-                      style={{ backgroundColor: COLORS[it.kind] }}
-                      title={it.title}
-                    >
-                      <span className="font-semibold">{it.kind}</span>
-                      <span className="mx-1">•</span>
-                      {it.title}
-                    </div>
-                  ))}
-                  {list.length > 3 && (
-                    <div className="text-[11px] text-blue-600">+ بیشتر…</div>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Day Modal */}
-        {openDayISO && (
-          <Modal onClose={() => setOpenDayISO(null)}>
-            <DayDetail
-              iso={openDayISO}
-              items={items}
-              people={PEOPLE}
-              projects={PROJECTS}
-              onAdd={() => {
-                startEditing(undefined, dayjs(openDayISO));
-              }}
-              onEdit={(it) => startEditing(it)}
-              onRemove={removeItem}
-            />
-          </Modal>
-        )}
-
-        {/* Create/Edit Modal */}
-        {formOpen && (
-          <Modal onClose={() => setFormOpen(false)}>
-            <EditForm
-              draft={draft}
-              setDraft={setDraft}
-              people={PEOPLE}
-              projects={PROJECTS}
-              onCancel={() => setFormOpen(false)}
-              onSave={saveDraft}
-              onRangeToggle={(checked) => {
-                if (checked) {
-                  setDraft((d) => ({
-                    ...d,
-                    start: d.date ?? toJ().toDate().toISOString(),
-                    end: dayjs(d.date ?? toJ().toISOString())
-                      .add(1, "day")
-                      .toDate()
-                      .toISOString(),
-                    date: undefined,
-                  }));
-                } else {
-                  setDraft((d) => ({
-                    ...d,
-                    date: d.start ?? toJ().toDate().toISOString(),
-                    start: undefined,
-                    end: undefined,
-                  }));
-                }
-              }}
-              isEditing={!!editingId}
-            />
-          </Modal>
-        )}
       </div>
+
+      <div className="grid gap-6 xl:grid-cols-[1.8fr,1fr] items-start">
+        <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-4">
+          {/* Header controls */}
+          <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
+            <div className="flex items-center gap-2">
+              <button
+                className="px-3 py-2 rounded-lg border border-gray-200 hover:bg-gray-50"
+                onClick={handlePrev}
+              >
+                ▶
+              </button>
+              <button
+                className="px-3 py-2 rounded-lg border border-gray-200 hover:bg-gray-50"
+                onClick={handleToday}
+              >
+                امروز
+              </button>
+              <button
+                className="px-3 py-2 rounded-lg border border-gray-200 hover:bg-gray-50"
+                onClick={handleNext}
+              >
+                ◀
+              </button>
+            </div>
+            <h2 className="text-lg font-semibold text-gray-900">{monthTitle}</h2>
+            <div className="flex items-center gap-2 text-[11px] text-gray-500">
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full" style={{ background: COLORS["جلسه"] }} /> جلسه</span>
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full" style={{ background: COLORS["واگذاری"] }} /> واگذاری</span>
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full" style={{ background: COLORS["مهلت"] }} /> مهلت</span>
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full" style={{ background: COLORS["رویداد"] }} /> رویداد</span>
+            </div>
+          </div>
+
+          {/* Week header */}
+          <div className="grid grid-cols-7 gap-2 mb-2">
+            {WEEKDAYS_FA.map((w) => (
+              <div
+                key={w}
+                className="text-center text-sm text-gray-500 py-2 select-none"
+              >
+                {w}
+              </div>
+            ))}
+          </div>
+
+          {/* Days grid */}
+          <div className="grid grid-cols-7 gap-2">
+            {days.map((d) => {
+              const isoKey = d.toDate().toISOString().slice(0, 10);
+              const list = dayItems.get(isoKey) ?? [];
+              const inThisMonth = d.month() === toJ(currentMonth).month();
+              const isToday = sameDay(d, toJ());
+
+              return (
+                <div
+                  key={d.valueOf()}
+                  onClick={() => openForDay(d)}
+                  className={[
+                    "rounded-lg border p-2 min-h-[120px] flex flex-col cursor-pointer transition-colors",
+                    inThisMonth
+                      ? "bg-white border-gray-200 hover:bg-blue-50"
+                      : "bg-gray-50 border-gray-100 text-gray-400",
+                    isToday ? "ring-2 ring-blue-500" : "",
+                  ].join(" ")}
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <span
+                      className={[
+                        "text-sm font-semibold",
+                        inThisMonth ? "text-gray-800" : "text-gray-400",
+                      ].join(" ")}
+                    >
+                      {toJ(d).format("D")}
+                    </span>
+                    {/* dot count */}
+                    {list.length > 0 && (
+                      <span className="text-[11px] text-gray-500">
+                        {list.length} مورد
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="flex-1 space-y-1 overflow-hidden">
+                    {list.slice(0, 3).map((it) => (
+                      <div
+                        key={it.id}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setOpenDayISO(d.toDate().toISOString());
+                        }}
+                        className="text-[11px] px-1.5 py-1 rounded-md text-white truncate"
+                        style={{ backgroundColor: COLORS[it.kind] }}
+                        title={it.title}
+                      >
+                        <span className="font-semibold">{it.kind}</span>
+                        <span className="mx-1">•</span>
+                        {it.title}
+                      </div>
+                    ))}
+                    {list.length > 3 && (
+                      <div className="text-[11px] text-blue-600">+ بیشتر…</div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm">
+            <h3 className="text-base font-semibold text-gray-900 mb-3">
+              پروژه‌های موجود در تقویم
+            </h3>
+            <div className="space-y-3">
+              {PROJECTS.map((project) => {
+                const nextItem = items
+                  .filter((it) => it.projectId === project.id)
+                  .sort((a, b) => {
+                    const aDate = dayjs(a.date ?? a.start ?? dayjs());
+                    const bDate = dayjs(b.date ?? b.start ?? dayjs());
+                    return aDate.valueOf() - bDate.valueOf();
+                  })[0];
+
+                return (
+                  <div
+                    key={project.id}
+                    className="p-3 rounded-xl border border-gray-100 bg-gray-50"
+                  >
+                    <div className="flex items-center justify-between gap-2 flex-wrap mb-1">
+                      <span className="px-2 py-1 rounded-lg bg-white border border-gray-200 text-xs font-semibold">
+                        {project.code}
+                      </span>
+                      <button
+                        className="text-[11px] text-blue-600 hover:text-blue-800"
+                        onClick={() => navigate(`/projects/${project.id}`)}
+                      >
+                        باز کردن پرونده
+                      </button>
+                    </div>
+                    <p className="text-sm font-semibold text-gray-900">{project.title}</p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {PROJECT_STATUS[project.id]}
+                    </p>
+                    {nextItem ? (
+                      <p className="text-xs text-gray-600 mt-2">
+                        رویداد بعدی: {nextItem.title} · {formatJ(nextItem.date ?? nextItem.start)}
+                      </p>
+                    ) : (
+                      <p className="text-xs text-gray-400 mt-2">
+                        برای این پروژه هنوز رویدادی تنظیم نشده است.
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Day Modal */}
+      {openDayISO && (
+        <Modal onClose={() => setOpenDayISO(null)}>
+          <DayDetail
+            iso={openDayISO}
+            items={items}
+            people={PEOPLE}
+            projects={PROJECTS}
+            onAdd={() => {
+              startEditing(undefined, dayjs(openDayISO));
+            }}
+            onEdit={(it) => startEditing(it)}
+            onRemove={removeItem}
+          />
+        </Modal>
+      )}
+
+      {/* Create/Edit Modal */}
+      {formOpen && (
+        <Modal onClose={() => setFormOpen(false)}>
+          <EditForm
+            draft={draft}
+            setDraft={setDraft}
+            people={PEOPLE}
+            projects={PROJECTS}
+            onCancel={() => setFormOpen(false)}
+            onSave={saveDraft}
+            onRangeToggle={(checked) => {
+              if (checked) {
+                setDraft((d) => ({
+                  ...d,
+                  start: d.date ?? toJ().toDate().toISOString(),
+                  end: dayjs(d.date ?? toJ().toISOString())
+                    .add(1, "day")
+                    .toDate()
+                    .toISOString(),
+                  date: undefined,
+                }));
+              } else {
+                setDraft((d) => ({
+                  ...d,
+                  date: d.start ?? toJ().toDate().toISOString(),
+                  start: undefined,
+                  end: undefined,
+                }));
+              }
+            }}
+            isEditing={!!editingId}
+          />
+        </Modal>
+      )}
+    </div>
   );
 }
 
