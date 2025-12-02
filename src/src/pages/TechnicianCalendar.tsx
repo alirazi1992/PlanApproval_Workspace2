@@ -8,6 +8,8 @@ import { AppShell } from "../components/layout/AppShell";
 import { Card } from "../components/ui/Card";
 import { Button } from "../components/ui/Button";
 import { Icon } from "../components/ui/Icon";
+import { Dialog } from "../components/ui/Dialog";
+import { Input } from "../components/ui/Input";
 import { Donut } from "../components/charts/Donut";
 import { AreaSpark } from "../components/charts/AreaSpark";
 import { mockAvatars } from "../mocks/db";
@@ -79,6 +81,15 @@ type CollabTeamStream = {
   progress: number;
   progressClass: string;
   channel: string;
+};
+
+type FieldMissionForm = {
+  title: string;
+  location: string;
+  date: DateObject | null;
+  window: string;
+  lead: string;
+  notes: string;
 };
 
 type CollabQuickLink = {
@@ -614,6 +625,16 @@ function TechnicianDashboardView() {
   );
   const [showTaskForm, setShowTaskForm] = useState(false);
   const [taskForm, setTaskForm] = useState({ title: "", owner: "", due: "" });
+  const [showFieldMissionDialog, setShowFieldMissionDialog] = useState(false);
+  const [fieldMissionForm, setFieldMissionForm] = useState<FieldMissionForm>({
+    title: "بازدید میدانی پروژه جدید",
+    location: "کارگاه شمال شهر",
+    date: new DateObject({ calendar: persian, locale: persian_fa }),
+    window: "09:00 - 11:00",
+    lead: mockAvatars[0]?.name ?? "",
+    notes: "نیاز به هماهنگی با حراست و ایمنی سایت.",
+  });
+  const [scheduledMission, setScheduledMission] = useState<FieldMissionForm | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [activeWorkbench, setActiveWorkbench] = useState<string>(
     workbenchProjects[0]?.id ?? ""
@@ -674,6 +695,22 @@ function TechnicianDashboardView() {
     showMessage(`${label} اجرا شد و در سوابق فعالیت ثبت گردید.`);
   };
 
+  const handleSubmitFieldMission = () => {
+    if (!fieldMissionForm.title.trim() || !fieldMissionForm.location.trim()) {
+      showMessage("عنوان و محل ماموریت را کامل کنید.");
+      return;
+    }
+
+    const formattedDate =
+      fieldMissionForm.date?.format?.("YYYY/MM/DD") ?? "بدون تاریخ مشخص";
+
+    setScheduledMission(fieldMissionForm);
+    setShowFieldMissionDialog(false);
+    showMessage(
+      `ماموریت «${fieldMissionForm.title}» برای ${formattedDate} در ${fieldMissionForm.window} ثبت شد.`
+    );
+  };
+
   const metrics = metricsByRange[timeRange];
   const donutData = donutByRange[timeRange];
   const sparkData = sparkByRange[timeRange];
@@ -699,6 +736,8 @@ function TechnicianDashboardView() {
   }, [selectedDateKey]);
 
   const availableTechnicians = mockAvatars.slice(0, 5);
+  const missionDateLabel =
+    scheduledMission?.date?.format?.("YYYY/MM/DD") ?? "تاریخ در انتظار تعیین";
 
   return (
     <AppShell>
@@ -721,7 +760,11 @@ function TechnicianDashboardView() {
               <Icon name="layers" size={16} className="ml-2" />
               بازگشت به مرور پروژه‌ها
             </Button>
-            <Button variant="primary" className="px-5 py-2 text-sm">
+            <Button
+              variant="primary"
+              className="px-5 py-2 text-sm"
+              onClick={() => setShowFieldMissionDialog(true)}
+            >
               <Icon name="calendar" size={16} className="ml-2" />
               رزرو ماموریت میدانی
             </Button>
@@ -742,6 +785,40 @@ function TechnicianDashboardView() {
               بستن
             </button>
           </div>
+        )}
+
+        {scheduledMission && (
+          <Card className="p-4 border-amber-200 bg-amber-50 text-right">
+            <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+              <div className="space-y-1">
+                <p className="text-sm text-amber-700">درخواست رزرو ماموریت میدانی ثبت شد</p>
+                <h3 className="text-lg font-semibold text-gray-900">{scheduledMission.title}</h3>
+                <div className="flex flex-wrap gap-3 text-sm text-gray-700 flex-row-reverse">
+                  <span className="flex items-center gap-1 flex-row-reverse">
+                    <Icon name="calendar" size={16} className="ml-1" />
+                    {missionDateLabel} | {scheduledMission.window}
+                  </span>
+                  <span className="flex items-center gap-1 flex-row-reverse">
+                    <Icon name="users" size={16} className="ml-1" />
+                    مسئول: {scheduledMission.lead || "نامشخص"}
+                  </span>
+                  <span className="flex items-center gap-1 flex-row-reverse text-amber-800">
+                    <Icon name="shield" size={16} className="ml-1" />
+                    محل حضور: {scheduledMission.location}
+                  </span>
+                </div>
+                <p className="text-sm text-gray-600">{scheduledMission.notes}</p>
+              </div>
+              <div className="flex items-center gap-2 flex-row-reverse">
+                <Button variant="ghost" className="text-sm" onClick={() => setShowFieldMissionDialog(true)}>
+                  بروزرسانی جزئیات
+                </Button>
+                <Button variant="primary" className="text-sm" onClick={() => showMessage("جزئیات ماموریت به تیم اعلام شد.")}>
+                  ارسال به تیم میدانی
+                </Button>
+              </div>
+            </div>
+          </Card>
         )}
 
         {headerTab === "general" && (
@@ -1383,6 +1460,111 @@ function TechnicianDashboardView() {
           </>
         )}
       </div>
+
+      <Dialog
+        isOpen={showFieldMissionDialog}
+        onClose={() => setShowFieldMissionDialog(false)}
+        title="رزرو ماموریت میدانی"
+      >
+        <div className="space-y-4 text-right">
+          <div className="grid gap-3 md:grid-cols-2">
+            <Input
+              label="عنوان ماموریت"
+              value={fieldMissionForm.title}
+              onChange={(e) =>
+                setFieldMissionForm((prev) => ({ ...prev, title: e.target.value }))
+              }
+              placeholder="مثلاً بازدید ایمنی یا تحویل تجهیز"
+            />
+            <Input
+              label="محل حضور"
+              value={fieldMissionForm.location}
+              onChange={(e) =>
+                setFieldMissionForm((prev) => ({ ...prev, location: e.target.value }))
+              }
+              placeholder="لوکیشن دقیق را وارد کنید"
+            />
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-2">
+            <div>
+              <p className="block text-sm font-medium text-gray-700 mb-1.5 text-right">
+                تاریخ اجرای ماموریت
+              </p>
+              <DatePicker
+                value={fieldMissionForm.date}
+                onChange={(value) => {
+                  if (Array.isArray(value)) return;
+                  setFieldMissionForm((prev) => ({ ...prev, date: value }));
+                }}
+                calendar={persian}
+                locale={persian_fa}
+                format="YYYY/MM/DD"
+                calendarPosition="bottom-center"
+                containerClassName="w-full"
+                inputClass="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-right bg-white focus:outline-none focus:ring-2 focus:ring-gray-900"
+              />
+            </div>
+            <Input
+              label="بازه زمانی پیشنهادی"
+              value={fieldMissionForm.window}
+              onChange={(e) =>
+                setFieldMissionForm((prev) => ({ ...prev, window: e.target.value }))
+              }
+              placeholder="مثلاً 09:00 تا 11:00"
+            />
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-2">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5 text-right">
+                کارشناس مسئول
+              </label>
+              <select
+                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-right bg-white focus:outline-none focus:ring-2 focus:ring-gray-900"
+                value={fieldMissionForm.lead}
+                onChange={(e) =>
+                  setFieldMissionForm((prev) => ({ ...prev, lead: e.target.value }))
+                }
+              >
+                {availableTechnicians.map((tech) => (
+                  <option key={tech.id} value={tech.name}>
+                    {tech.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5 text-right">
+                توضیحات هماهنگی
+              </label>
+              <textarea
+                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-right bg-white focus:outline-none focus:ring-2 focus:ring-gray-900"
+                rows={3}
+                value={fieldMissionForm.notes}
+                onChange={(e) =>
+                  setFieldMissionForm((prev) => ({ ...prev, notes: e.target.value }))
+                }
+                placeholder="پیش‌نیازهای حضور، تجهیزات لازم یا هماهنگی با واحدها"
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between flex-row-reverse">
+            <div className="text-xs text-gray-500">
+              رزرو موقت پس از تأیید به جدول زمان‌بندی تیم میدانی اضافه می‌شود.
+            </div>
+            <div className="flex gap-3 flex-row-reverse">
+              <Button variant="ghost" className="text-sm" onClick={() => setShowFieldMissionDialog(false)}>
+                انصراف
+              </Button>
+              <Button variant="primary" className="text-sm" onClick={handleSubmitFieldMission}>
+                ثبت و هماهنگی
+              </Button>
+            </div>
+          </div>
+        </div>
+      </Dialog>
     </AppShell>
   );
 }
